@@ -63,11 +63,13 @@ int _write(int file, char *ptr, int len)
 }
 
 /* USER CODE END 0 */
+uint8_t Rx_data[8]; /* Declaration of a variable of 8 bytes size */
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){ /*Declares a callback function to perform LED state change and generates an interrupt when 4 bytes are detected.*/
+	HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_5);/* Generates the change of state in the LED */
+	HAL_UART_Receive_IT(&huart2,Rx_data,4);/* Generates interrupt when detecting 4 bytes. */
+}
+
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -93,13 +95,20 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
 
-  /*uint8_t my_str[]="Hello World!\r\n";*/
- /* HAL_UART_Transmit(&huart2, my_str,sizeof(my_str)-1,10);/*/
+  HAL_UART_Receive_IT(&huart2,Rx_data,4);/* It calls a function of the HAL library to receive data with uart and when the 4 bytes condition is met, it generates an interrupt.  */
+
   /* USER CODE END 2 */
-  for (uint8_t idx = 0;idx <= 0x0F; idx++)
-	  printf("IDX 0x%02X\r\n", idx);
+  	/*uint8_t my_str[]="Hello World!\r\n";
+    HAL_UART_Transmit(&huart2, my_str,sizeof(my_str)-1,10);*/
 
+
+    for (uint8_t idx = 0;idx <= 0x0F; idx++)
+  	  printf("IDX 0x%02X\r\n", idx);
+
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
