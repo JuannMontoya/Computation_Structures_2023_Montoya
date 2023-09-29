@@ -41,6 +41,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 
@@ -49,6 +50,7 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -56,20 +58,37 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+uint8_t Rx_data[8]; /* Declaration of a variable of 8 bytes size */
+uint8_t Tx_busy=0;
+
 int _write(int file, char *ptr, int len)
 {
-  HAL_UART_Transmit (&huart2,(uint8_t *)ptr,len,10);
+  while(Tx_busy !=0){/*wait*/}
+  HAL_UART_Transmit_DMA(&huart2,(uint8_t *)ptr,len);
+  Tx_busy=1;
   return len;
 }
 
-/* USER CODE END 0 */
-uint8_t Rx_data[8]; /* Declaration of a variable of 8 bytes size */
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){ /*Declares a callback function to perform LED state change and generates an interrupt when 4 bytes are detected.*/
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart){ /*Declares a callback function to perform LED state change and generates an interrupt when 4 bytes are detected.*/
 	HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_5);/* Generates the change of state in the LED */
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	printf("Received Complete[%s]\r\n ",Rx_data);
 	HAL_UART_Receive_IT(&huart2,Rx_data,4);/* Generates interrupt when detecting 4 bytes. */
 }
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	Tx_busy=0;
+}
 
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -82,7 +101,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -94,21 +112,21 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_UART_Receive_IT(&huart2,Rx_data,4);/* It calls a function of the HAL library to receive data with uart and when the 4 bytes condition is met, it generates an interrupt.  */
 
+	/*uint8_t my_str[]="Hello World!\r\n";
+  HAL_UART_Transmit(&huart2, my_str,sizeof(my_str)-1,10);*/
+
+  for (uint8_t idx = 0;idx <= 0x0F; idx++)
+	  printf("IDX 0x%02X\r\n", idx);
   /* USER CODE END 2 */
-  	/*uint8_t my_str[]="Hello World!\r\n";
-    HAL_UART_Transmit(&huart2, my_str,sizeof(my_str)-1,10);*/
 
-
-    for (uint8_t idx = 0;idx <= 0x0F; idx++)
-  	  printf("IDX 0x%02X\r\n", idx);
-
-    /* Infinite loop */
-    /* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -201,6 +219,22 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
 
 }
 
